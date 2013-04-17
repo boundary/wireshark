@@ -1,0 +1,255 @@
+#
+# $Id$
+#
+# NSIS is a free packager/installer/uninstaller program for Win32.
+# It was originally written for the Winamp package, but various
+# freeware and non-freeware packages are using it, too.
+#
+# http://www.nullsoft.com/free/nsis/
+
+include ../../config.nmake
+# Contains a list of custom plugins(default empty)
+include Custom.nmake
+
+
+STAGING_DIR=..\..\$(INSTALL_DIR)
+
+EXE=../../tshark.exe ../../editcap.exe \
+!IFDEF GTK_DIR
+	../../wireshark.exe \
+!ENDIF
+	../../text2pcap.exe ../../mergecap.exe ../../capinfos.exe $(WIRESHARK_LIB_DIR)\WinPcap_$(PCAP_VERSION).exe
+DLL=../../wiretap/wiretap-$(WTAP_VERSION).dll ../../wsutil/libwsutil.dll
+DOC=../../doc/ws.css				\
+	../../doc/capinfos.html 		\
+	../../doc/dumpcap.html			\
+	../../doc/editcap.html 			\
+	../../doc/mergecap.html 		\
+	../../doc/rawshark.html 		\
+	../../doc/text2pcap.html 		\
+	../../doc/tshark.html			\
+	../../doc/wireshark-filter.html		\
+	../../doc/wireshark.html		\
+	$(STAGING_DIR)/COPYING.txt	\
+	$(STAGING_DIR)/NEWS.txt		\
+	$(STAGING_DIR)/README.txt		\
+	$(STAGING_DIR)/README.windows.txt
+
+GPL=../../COPYING
+HELP=$(STAGING_DIR)/help/capture_filters.txt \
+	$(STAGING_DIR)/help/capturing.txt \
+	$(STAGING_DIR)/help/display_filters.txt \
+	$(STAGING_DIR)/help/faq.txt \
+	$(STAGING_DIR)/help/getting_started.txt \
+	$(STAGING_DIR)/help/overview.txt \
+	$(STAGING_DIR)/help/toc
+
+PLUGINS= \
+	../../plugins/asn1/asn1.dll \
+	../../plugins/docsis/docsis.dll \
+	../../plugins/ethercat/ethercat.dll \
+	../../plugins/gryphon/gryphon.dll \
+	../../plugins/irda/irda.dll \
+	../../plugins/m2m/m2m.dll \
+	../../plugins/mate/mate.dll \
+	../../plugins/opcua/opcua.dll \
+	../../plugins/profinet/profinet.dll \
+	../../plugins/stats_tree/stats_tree.dll \
+	../../plugins/unistim/unistim.dll \
+	../../plugins/wimax/wimax.dll \
+	../../plugins/wimaxasncp/wimaxasncp.dll \
+	../../plugins/wimaxmacphy/wimaxmacphy.dll \
+	$(CUSTOM_PLUGINS)
+
+NSI=\
+	wireshark.nsi \
+	uninstall.nsi \
+	common.nsh \
+	GetWindowsVersion.nsh \
+	servicelib.nsh \
+	AdditionalTasksPage.ini \
+	WinPcapPage.ini
+
+UNINSTALL_INSTALLER = $(STAGING_DIR)\uninstall_installer.exe
+
+DELIVERABLES=$(EXE) $(DLL) $(DOC) $(DOC_dos) $(GPL) $(HELP) $(PLUGINS)
+
+!IFDEF MAKENSIS
+all: wireshark-$(WIRESHARK_TARGET_PLATFORM)-$(VERSION).exe
+!ELSE
+all: _FORCE_
+	@echo ? NSIS not available (MAKENSIS not defined in config.nmake)
+	@echo.
+	@exit 1
+!ENDIF
+
+# fetch the latest available user-guide.chm version
+user-guide.chm::
+	if exist ..\..\docbook\user-guide.chm xcopy ..\..\docbook\user-guide.chm . /Y /D
+	if exist $(WIRESHARK_LIB_DIR)\user-guide\user-guide.chm xcopy $(WIRESHARK_LIB_DIR)\user-guide\user-guide.chm . /Y /D
+
+NSIS_FLAGS=\
+	/DPROGRAM_NAME=$(PROGRAM_NAME) \
+	/DMAKEDIR=$(MAKEDIR) \
+	/DSTAGING_DIR=$(STAGING_DIR) \
+	/DWIRESHARK_TARGET_PLATFORM=$(WIRESHARK_TARGET_PLATFORM) \
+	/DTARGET_MACHINE=$(TARGET_MACHINE) \
+	/DMSVC_VARIANT=$(MSVC_VARIANT) \
+	/DMSC_VER_REQUIRED=$(MSC_VER_REQUIRED) \
+	/DWIRESHARK_LIB_DIR=$(WIRESHARK_LIB_DIR) \
+	/DPCAP_VERSION=$(PCAP_VERSION) \
+	/DPCAP_DISPLAY_VERSION=$(PCAP_VERSION:_=.) \
+!IFDEF MSVCR_DLL
+	/DMSVCR_DLL="$(MSVCR_DLL)" \
+!ENDIF
+!IFDEF VCREDIST_EXE
+	/DVCREDIST_EXE="$(VCREDIST_EXE)" \
+!ENDIF
+!IF "$(ENABLE_LIBWIRESHARK)" != ""
+	/DENABLE_LIBWIRESHARK=$(ENABLE_LIBWIRESHARK) \
+!ENDIF
+!IFDEF GTK_DIR
+	/DGTK_DIR=$(GTK_DIR) \
+	/DGTK_LIB_DIR=$(GTK_LIB_DIR) \
+	/DPANGO_LIB_DIR=$(PANGO_LIB_DIR) \
+	/DGDK_DLL=$(GDK_DLL) \
+	/DGTK_DLL=$(GTK_DLL) \
+	/DGTK_NAME=$(GTK_NAME) \
+	/DGTK_ETC_DIR=$(GTK_ETC_DIR) \
+!IFDEF GTK_ENGINES_DIR
+	/DGTK_ENGINES_DIR=$(GTK_ENGINES_DIR) \
+!ENDIF
+!IFDEF GTK_MODULES_DIR
+	/DGTK_MODULES_DIR=$(GTK_MODULES_DIR) \
+!ENDIF
+!IFDEF GTK_SCHEMAS_DIR
+	/DGTK_SCHEMAS_DIR=$(GTK_SCHEMAS_DIR) \
+!ENDIF
+!IFDEF NEED_CAIRO_GOBJECT_DLL
+       /DNEED_CAIRO_GOBJECT_DLL=$(NEED_CAIRO_GOBJECT_DLL) \
+!ENDIF
+!IFDEF NEED_CAIRO_DLL
+       /DNEED_CAIRO_DLL=$(NEED_CAIRO_DLL) \
+!ENDIF
+!IFDEF NEED_EXPAT_DLL
+       /DNEED_EXPAT_DLL=$(NEED_EXPAT_DLL) \
+       /DEXPAT_DLL=$(EXPAT_DLL) \
+!ENDIF
+!IFDEF NEED_FFI_DLL
+       /DNEED_FFI_DLL=$(NEED_FFI_DLL) \
+       /DFFI_DLL=$(FFI_DLL) \
+!ENDIF
+!IFDEF NEED_FONTCONFIG_DLL
+       /DNEED_FONTCONFIG_DLL=$(NEED_FONTCONFIG_DLL) \
+       /DFONTCONFIG_DLL=$(FONTCONFIG_DLL) \
+!ENDIF
+!IFDEF NEED_FREETYPE_DLL
+       /DNEED_FREETYPE_DLL=$(NEED_FREETYPE_DLL) \
+       /DFREETYPE_DLL=$(FREETYPE_DLL) \
+!ENDIF
+!IFDEF NEED_JASPER_DLL
+       /DNEED_JASPER_DLL=$(NEED_JASPER_DLL) \
+       /DJASPER_DLL=$(JASPER_DLL) \
+!ENDIF
+!IFDEF NEED_JPEG_DLL
+       /DNEED_JPEG_DLL=$(NEED_JPEG_DLL) \
+       /DJPEG_DLL=$(JPEG_DLL) \
+!ENDIF
+!IFDEF NEED_LZMA_DLL
+       /DNEED_LZMA_DLL=$(NEED_LZMA_DLL) \
+       /DLZMA_DLL=$(LZMA_DLL) \
+!ENDIF
+!IFDEF NEED_PIXMAN_DLL
+       /DNEED_PIXMAN_DLL=$(NEED_PIXMAN_DLL) \
+       /DPIXMAN_DLL=$(PIXMAN_DLL) \
+!ENDIF
+!IFDEF NEED_PNG_DLL
+       /DNEED_PNG_DLL=$(NEED_PNG_DLL) \
+       /DPNG_DLL=$(PNG_DLL) \
+!ENDIF
+!IFDEF NEED_TIFF_DLL
+       /DNEED_TIFF_DLL=$(NEED_TIFF_DLL) \
+       /DTIFF_DLL=$(TIFF_DLL) \
+!ENDIF
+!IFDEF NEED_XML_DLL
+       /DNEED_XML_DLL=$(NEED_XML_DLL) \
+       /DXML_DLL=$(XML_DLL) \
+!ENDIF
+!ENDIF
+	/DINTL_DLL=$(INTL_DLL) \
+	/DVERSION=$(VERSION) \
+	/DVERSION_MAJOR=$(VERSION_MAJOR) \
+	/DVERSION_MINOR=$(VERSION_MINOR) \
+	/DVERSION_MICRO=$(VERSION_MICRO) \
+	/DVERSION_BUILD=$(VERSION_BUILD) \
+	/DPRODUCT_VERSION=$(PRODUCT_VERSION) \
+	/DWTAP_VERSION=$(WTAP_VERSION) \
+!IF "$(C_ARES_DIR)" != ""
+	/DC_ARES_DIR=$(C_ARES_DIR) \
+!ENDIF
+!IF "$(ADNS_DIR)" != ""
+	/DADNS_DIR=$(ADNS_DIR) \
+!ENDIF
+!IF "$(KFW_DIR)" != ""
+	/DKFW_DIR=$(KFW_DIR) \
+	/DKFW_PATH=$(KFW_PATH) \
+!ENDIF
+!IF "$(GNUTLS_DIR)" != ""
+	/DGNUTLS_DIR=$(GNUTLS_DIR) \
+!ENDIF
+!IF "$(ZLIB_DIR)" != ""
+	/DZLIB_DIR=$(ZLIB_DIR) \
+!ENDIF
+!IFDEF LUA_DIR
+	/DLUA_DIR=$(LUA_DIR) \
+!ENDIF
+!IFDEF SMI_DIR
+	/DSMI_DIR=$(SMI_DIR) \
+!ENDIF
+!IFDEF GEOIP_DIR
+	/DGEOIP_DIR=$(GEOIP_DIR) \
+!ENDIF
+!IFDEF WINSPARKLE_DIR
+	/DWINSPARKLE_DIR=$(WINSPARKLE_DIR) \
+!ENDIF
+!IFDEF HHC_DIR
+	/DHHC_DIR="$(HHC_DIR)" \
+!ENDIF
+!IF EXIST("..\..\wireshark-qt-release\qtshark.exe")
+	/DQT_DIR="..\..\wireshark-qt-release" \
+!ENDIF
+
+$(STAGING_DIR)\uninstall.exe : $(NSI)
+	rm -f $(UNINSTALL_INSTALLER)
+	$(MAKENSIS) $(NSIS_FLAGS) uninstall.nsi
+	$(UNINSTALL_INSTALLER)
+	rm -f $(UNINSTALL_INSTALLER)
+
+uninstall-exe : $(STAGING_DIR)\uninstall.exe
+
+wireshark-$(WIRESHARK_TARGET_PLATFORM)-$(VERSION).exe : user-guide.chm $(NSI) $(DELIVERABLES) Makefile.nmake $(STAGING_DIR)\uninstall.exe
+	$(MAKENSIS) $(NSIS_FLAGS) wireshark.nsi
+
+clean:
+	rm -f wireshark-$(WIRESHARK_TARGET_PLATFORM)-$(VERSION).exe
+	rm -f $(UNINSTALL_INSTALLER)
+	rm -f NEWS.txt
+	rm -f user-guide.chm
+
+distclean: clean
+	rm -f wireshark-$(WIRESHARK_TARGET_PLATFORM)-*.exe
+
+maintainer-clean: distclean
+
+$(DOC):
+	cd ../../doc
+	$(MAKE) /$(MAKEFLAGS) -f makefile.nmake
+	cd ../packaging/nsis
+
+$(EXE) $(DLL):
+	cd ../..
+	$(MAKE) /$(MAKEFLAGS) -f makefile.nmake
+	cd packaging/nsis
+
+####
+_FORCE_:  ## Assumption: no file named _FORCE_ exists in the current directory

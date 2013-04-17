@@ -1,0 +1,61 @@
+## Makefile for building wireshark.exe with Microsoft C and nmake
+## Use: $(MAKE) /$(MAKEFLAGS) -f makefile.nmake
+#
+# $Id$
+
+include ..\config.nmake
+include <win32.mak>
+include ..\Makefile.nmake.inc
+
+############### no need to modify below this line #########
+
+include Makefile.common
+
+CFLAGS=$(WARNINGS_ARE_ERRORS) $(STANDARD_CFLAGS) \
+	/I. /I.. $(GLIB_CFLAGS) \
+	/I$(PCAP_DIR)\include -DWS_BUILD_DLL
+
+.c.obj::
+   $(CC) $(CFLAGS) -Fd.\ -c $<
+
+# For use when making libwsutil.dll
+libwsutil_LIBS = $(GLIB_LIBS)
+
+OBJECTS = file_util.obj		\
+	inet_aton.obj		\
+	inet_ntop.obj		\
+	inet_pton.obj		\
+	$(LIBWSUTIL_SRC:.c=.obj) \
+	strptime.obj		\
+	unicode-utils.obj	\
+	wsgetopt.obj
+
+# For use when making libwsutil.dll
+libwsutil.lib: libwsutil.dll
+libwsutil.exp: libwsutil.dll
+
+libwsutil.dll : $(OBJECTS) ..\image\libwsutil.res
+	$(link) $(dlllflags) $(conlibsdll) shell32.lib \
+		$(LOCAL_LDFLAGS) $(DLL_LDFLAGS) \
+		/OUT:libwsutil.dll \
+		/IMPLIB:libwsutil.lib \
+		..\image\libwsutil.res \
+		$(OBJECTS) $(libwsutil_LIBS)
+
+clean :
+	rm -f $(OBJECTS) \
+		libwsutil.lib \
+		libwsutil.exp \
+		libwsutil.dll \
+		libwsutil.dll.manifest \
+		*.pdb *.sbr
+
+distclean: clean
+
+maintainer-clean: distclean
+
+checkapi:
+##	$(PERL) ../tools/checkAPIs.pl -g abort -g termoutput \
+	$(PERL) ../tools/checkAPIs.pl -g termoutput -build \
+	$(LIBWSUTIL_SRC) \
+#	file_util.c unicode-utils.c

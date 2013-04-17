@@ -1,0 +1,126 @@
+# lpp.cnf
+# llp conformation file
+# Copyright 2011-2013 Pascal Quantin 
+# $Id$
+
+#.OPT
+PER
+UNALIGNED
+#.END
+
+#.EXPORTS
+Ellipsoid-Point_PDU
+EllipsoidPointWithAltitude_PDU
+HorizontalVelocity_PDU
+EllipsoidArc_PDU
+EllipsoidPointWithAltitudeAndUncertaintyEllipsoid_PDU
+Ellipsoid-PointWithUncertaintyCircle_PDU
+EllipsoidPointWithUncertaintyEllipse_PDU
+Polygon_PDU
+GNSS-ID
+GNSS-SignalID
+GNSS-SignalIDs
+GNSS-SystemTime
+SV-ID
+ECID-SignalMeasurementInformation
+CellGlobalIdGERAN
+CellGlobalIdEUTRA-AndUTRA  
+OTDOA-ReferenceCellInfo
+OTDOA-NeighbourCellInfoElement
+ARFCN-ValueEUTRA
+Ellipsoid-Point
+EllipsoidPointWithAltitude
+EllipsoidPointWithAltitudeAndUncertaintyEllipsoid  
+NetworkTime
+GNSS-ID-Bitmap
+ARFCN-ValueUTRA
+#.END
+
+#.PDU_NEW
+LPP-Message
+Ellipsoid-Point
+EllipsoidPointWithAltitude
+HorizontalVelocity
+EllipsoidArc
+EllipsoidPointWithAltitudeAndUncertaintyEllipsoid
+Ellipsoid-PointWithUncertaintyCircle
+EllipsoidPointWithUncertaintyEllipse
+Polygon
+#.END
+
+#.FN_HDR LPP-Message
+	
+  proto_tree_add_item(tree, proto_lpp, tvb, 0, -1, ENC_NA);
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_PROTOCOL, "/", "LPP");
+#.END
+
+# Handle 64 bit constraint
+#.FN_PARS NavModelCNAV-KeplerianSet/cnavMo FN_VARIANT = _64b
+#.TYPE_ATTR
+NavModelCNAV-KeplerianSet/cnavMo TYPE = FT_INT64
+#.FN_PARS NavModelCNAV-KeplerianSet/cnavE FN_VARIANT = _64b
+#.TYPE_ATTR
+NavModelCNAV-KeplerianSet/cnavE TYPE = FT_UINT64
+#.FN_PARS NavModelCNAV-KeplerianSet/cnavOmega FN_VARIANT = _64b
+#.TYPE_ATTR
+NavModelCNAV-KeplerianSet/cnavOmega TYPE = FT_INT64
+#.FN_PARS NavModelCNAV-KeplerianSet/cnavOMEGA0 FN_VARIANT = _64b
+#.TYPE_ATTR
+NavModelCNAV-KeplerianSet/cnavOMEGA0 TYPE = FT_INT64
+#.FN_PARS NavModelCNAV-KeplerianSet/cnavIo FN_VARIANT = _64b
+#.TYPE_ATTR
+NavModelCNAV-KeplerianSet/cnavIo TYPE = FT_INT64
+
+#.FN_HDR RequestCapabilities
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "Request Capabilities");
+
+#.FN_HDR ProvideCapabilities
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "Provide Capabilities");
+
+#.FN_HDR RequestAssistanceData
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "Request Assistance Data");
+
+#.FN_HDR ProvideAssistanceData
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "Provide Assistance Data");
+
+#.FN_HDR RequestLocationInformation
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "Request Location Information");
+
+#.FN_HDR ProvideLocationInformation
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "Provide Location Information");
+
+#.FN_HDR Abort
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "Abort");
+
+#.FN_HDR Error
+
+  col_append_sep_str(actx->pinfo->cinfo, COL_INFO, NULL, "Error");
+
+#.FN_BODY EPDU-ID VAL_PTR = &lpp_epdu_id
+%(DEFAULT_BODY)s
+
+#.TYPE_ATTR
+EPDU-ID STRINGS=VALS(lpp_ePDU_ID_vals)
+
+#.FN_BODY EPDU-Body VAL_PTR=&lppe_tvb
+  tvbuff_t *lppe_tvb = NULL;
+%(DEFAULT_BODY)s
+  switch(lpp_epdu_id){
+  case 1:
+    if (lppe_tvb && lppe_handle) {
+      call_dissector(lppe_handle, lppe_tvb, actx->pinfo, tree);
+    }
+    break;
+  default:
+    break;
+  }
+  lpp_epdu_id = -1;
+

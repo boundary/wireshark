@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- $Id$ -->
+
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.tcpdump.pcap">
+    <comment>Packet Capture (PCAP)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <alias type="application/x-pcap"/>
+    <alias type="application/pcap"/>
+    <magic>
+      <!-- standard PCAP file -->
+      <match type="big32"    offset="0" value="0xa1b2c3d4"/>
+      <match type="little32" offset="0" value="0xa1b2c3d4"/>
+      <!-- extended (Alexey-Kuznetsov's-patches) PCAP file -->
+      <match type="big32"    offset="0" value="0xa1b2cd34"/>
+      <match type="little32" offset="0" value="0xa1b2cd34"/>
+    </magic>
+    <glob pattern="*.pcap"/>
+    <glob pattern="*.pcap.gz"/>
+  </mime-type>
+
+  <mime-type type="application/x-pcapng">
+    <comment>Packet Capture (PCAPNG)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="big32"      offset="0" value="0x0a0d0d0a">
+	<match type="big32"    offset="8" value="0x1a2b3c4d"/>
+      </match>
+      <match type="little32"   offset="0" value="0x0a0d0d0a">
+	<match type="little32" offset="8" value="0x1a2b3c4d"/>
+      </match>
+    </magic>
+    <glob pattern="*.pcapng"/>
+    <glob pattern="*.ntar"/>
+    <glob pattern="*.pcapng.gz"/>
+    <glob pattern="*.ntar.gz"/>
+  </mime-type>
+
+  <mime-type type="application/x-snoop">
+    <comment>Packet Capture (Snoop)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="string" offset="0" value="snoop"/>
+    </magic>
+    <glob pattern="*.snoop"/>
+    <glob pattern="*.snoop.gz"/>
+  </mime-type>
+
+  <mime-type type="application/x-iptrace">
+    <comment>Packet Capture (AIX iptrace)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="string" offset="0" value="iptrace 1.0"/>
+      <match type="string" offset="0" value="iptrace 2.0"/>
+    </magic>
+  </mime-type>
+
+  <mime-type type="application/x-lanalyzer">
+    <comment>Packet Capture (Novell LANalyzer)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="little16" offset="0" value="0x1001"/>
+      <match type="little16" offset="0" value="0x1007"/>
+    </magic>
+    <glob pattern="*.tr1"/>
+    <glob pattern="*.tr1.gz"/>
+  </mime-type>
+
+  <mime-type type="application/x-nettl">
+    <comment>Packet Capture (HP-UX nettl)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="string" offset="0" value="\x54\x52\x00\x64\x00"/>
+    </magic>
+    <glob pattern="*.trc0"/>
+    <glob pattern="*.trc1"/>
+    <glob pattern="*.trc0.gz"/>
+    <glob pattern="*.trc1.gz"/>
+  </mime-type>
+
+  <mime-type type="application/x-radcom">
+    <comment>Packet Capture (Radcom WAN/LAN Analyzer)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="string" offset="0" value="\x42\xd2\x00\x34\x12\x66\x22\x88"/>
+    </magic>
+  </mime-type>
+
+  <mime-type type="application/x-etherpeek">
+    <comment>Packet Capture (Wildpackets/Etherpeek/Airopeek tagged/v9)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="string" offset="0" value="\177ver"/>
+    </magic>
+    <glob pattern="*.tpc"/>
+    <glob pattern="*.apc"/>
+    <glob pattern="*.wpz"/>
+    <glob pattern="*.tpc.gz"/>
+    <glob pattern="*.apc.gz"/>
+    <glob pattern="*.wpz.gz"/>
+  </mime-type>
+
+  <mime-type type="application/x-visualnetworks">
+    <comment>Packet Capture (Visual Networks)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="string" offset="0" value="\x05VNF"/>
+    </magic>
+  </mime-type>
+
+  <mime-type type="application/x-netinstobserver">
+    <comment>Packet Capture (Network Instruments Observer)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="string" offset="0" value="ObserverPktBuffe"/>
+    </magic>
+    <glob pattern="*.bfr"/>
+    <glob pattern="*.bfr.gz"/>
+  </mime-type>
+
+  <mime-type type="application/x-5view">
+    <comment>Packet Capture (Accellent/InfoVista 5view)</comment>
+    <generic-icon name="application-wireshark-doc"/>
+    <magic>
+      <match type="string" offset="0" value="\xaa\xaa\xaa\xaa"/>
+    </magic>
+    <glob pattern="*.5vw"/>
+    <glob pattern="*.5vw.gz"/>
+  </mime-type>
+</mime-info>

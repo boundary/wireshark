@@ -1,0 +1,230 @@
+# Makefile.common
+#     Contains the stuff from Makefile.am and Makefile.nmake that is
+#     a) common to both files and
+#     b) portable between both files
+#
+# $Id$
+#
+# Wireshark - Network traffic analyzer
+# By Gerald Combs <gerald@wireshark.org>
+# Copyright 1998 Gerald Combs
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+# "BUILT_SOURCES" are built before any "make all" or "make check" targets.
+BUILT_HEADER_FILES =	\
+	svnversion.h
+
+BUILT_C_FILES =		\
+	ps.c
+
+BUILT_SOURCES =	$(BUILT_C_FILES) $(BUILT_HEADER_FILES)
+
+# Header files generated from source files.
+GENERATED_HEADER_FILES = \
+	$(BUILT_HEADER_FILES)
+
+# C source files generated from source files.
+GENERATED_C_FILES = \
+	$(BUILT_C_FILES)
+
+# All the generated files.
+GENERATED_FILES = $(GENERATED_C_FILES) $(GENERATED_HEADER_FILES)
+
+# sources common for wireshark, tshark, and rawshark
+WIRESHARK_COMMON_SRC =	\
+	$(PLATFORM_SRC)		\
+	capture-pcap-util.c	\
+	cfile.c			\
+	cfutils.c		\
+	clopts_common.c		\
+	disabled_protos.c	\
+	frame_data_sequence.c	\
+	packet-range.c		\
+	print.c			\
+	ps.c			\
+	sync_pipe_write.c	\
+	timestats.c		\
+	tap-megaco-common.c	\
+	tap-rtp-common.c	\
+	version_info.c
+
+# corresponding headers
+WIRESHARK_COMMON_INCLUDES =	\
+	svnversion.h		\
+	capture-pcap-util.h	\
+	capture-pcap-util-int.h	\
+	capture_unix_ifnames.h	\
+	cfile.h			\
+	cfutils.h		\
+	clopts_common.h		\
+	cmdarg_err.h		\
+	console_io.h		\
+	color.h			\
+	disabled_protos.h	\
+	file.h			\
+	fileset.h		\
+	frame_data_sequence.h	\
+	isprint.h		\
+	packet-range.h		\
+	print.h			\
+	ps.h			\
+	register.h		\
+	tempfile.h		\
+	timestats.h		\
+	tap-megaco-common.h	\
+	tap-rtp-common.h	\
+	version_info.h		\
+	ws_symbol_export.h
+
+# sources common for wireshark and tshark, but not rawshark;
+# these are for programs that capture traffic by running dumpcap
+SHARK_COMMON_CAPTURE_SRC =	\
+	capture_ifinfo.c	\
+	capture_sync.c		\
+	capture_ui_utils.c
+
+# corresponding headers
+SHARK_COMMON_CAPTURE_INCLUDES =	\
+	capture_ifinfo.h	\
+	capture_sync.h		\
+	capture_ui_utils.h
+
+# wireshark specifics
+wireshark_SOURCES =	\
+	$(WIRESHARK_COMMON_SRC)	\
+	$(SHARK_COMMON_CAPTURE_SRC) \
+	airpcap_loader.c \
+	capture.c	\
+	capture_info.c	\
+	capture_opts.c \
+	color_filters.c	\
+	file.c	\
+	fileset.c	\
+	filters.c	\
+	g711.c \
+	iface_monitor.c \
+	merge.c	\
+	proto_hier_stats.c	\
+	summary.c	\
+	tempfile.c	\
+	u3.c		\
+	ws80211_utils.c
+
+# corresponding headers
+wireshark_INCLUDES =	\
+	airpcap.h	\
+	airpcap_loader.h \
+	capture.h	\
+	capture_info.h	\
+	capture_opts.h	\
+	color_filters.h	\
+	filters.h	\
+	g711.h	\
+	globals.h	\
+	iface_monitor.h \
+	log.h	\
+	merge.h	\
+	proto_hier_stats.h	\
+	stat_menu.h	\
+	summary.h	\
+	sync_pipe.h	\
+	u3.h		\
+	ws80211_utils.h
+
+# tshark specifics
+tshark_SOURCES =	\
+	$(WIRESHARK_COMMON_SRC)	\
+	$(SHARK_COMMON_CAPTURE_SRC) \
+	capture_opts.c		\
+	tempfile.c		\
+	tshark.c
+
+# rawshark specifics
+rawshark_SOURCES =	\
+	$(WIRESHARK_COMMON_SRC)	\
+	rawshark.c
+
+# text2pcap specifics
+text2pcap_SOURCES = \
+	pcapio.c \
+	text2pcap.c \
+	text2pcap-scanner.l
+
+text2pcap_INCLUDES = \
+	pcapio.h \
+	text2pcap.h
+
+# mergecap specifics
+mergecap_SOURCES = \
+	mergecap.c \
+	merge.c \
+	svnversion.h
+
+# editcap specifics
+editcap_SOURCES = \
+	editcap.c	\
+	epan/crypt/md5.c \
+	epan/nstime.c \
+	$(WTAP_PLUGIN_SOURCES)
+
+# reordercap specifics
+reordercap_SOURCES = \
+	reordercap.c \
+	svnversion.h
+
+# capinfos specifics
+capinfos_SOURCES = \
+	capinfos.c \
+	$(WTAP_PLUGIN_SOURCES)
+
+# dftest specifics
+dftest_SOURCES =	\
+	dftest.c
+
+# randpkt specifics
+randpkt_SOURCES = \
+	randpkt.c
+
+# dumpcap specifics
+dumpcap_SOURCES =	\
+	$(PLATFORM_SRC) \
+	capture_opts.c \
+	capture-pcap-util.c	\
+	capture_stop_conditions.c	\
+	cfutils.c	\
+	clopts_common.c	\
+	conditions.c	\
+	dumpcap.c	\
+	pcapio.c	\
+	ringbuffer.c	\
+	sync_pipe_write.c	\
+	tempfile.c	\
+	version_info.c	\
+	ws80211_utils.c
+
+# corresponding headers
+dumpcap_INCLUDES = \
+	capture_stop_conditions.h	\
+	conditions.h	\
+	pcapio.h	\
+	ringbuffer.h
+
+# this target needed for distribution only
+noinst_HEADERS =	\
+	$(WIRESHARK_COMMON_INCLUDES) \
+	$(SHARK_COMMON_CAPTURE_INCLUDES) \
+	$(wireshark_INCLUDES) \
+	$(dumpcap_INCLUDES)

@@ -1,0 +1,1318 @@
+## Makefile for building wireshark.exe with Microsoft C and nmake
+## Use: $(MAKE) /$(MAKEFLAGS) -f makefile.nmake
+#
+# $Id$
+
+# We "Deploy using XCopy," which is described at
+# http://msdn.microsoft.com/en-us/library/ms235291.aspx
+
+include config.nmake
+include <win32.mak>
+
+############### no need to modify below this line #########
+
+CC = cl
+LINK= link
+BSCMAKE= bscmake
+
+WIN_SETUP=tools/$(WIRESHARK_TARGET_PLATFORM)-setup.sh
+
+# -------------
+# Checking  that the Wireshark Libraries are up-to-date:
+#  1. win??-setup.sh --checktag is invoked during nmake "preprocessing".
+#     If an error status is returned (ie: the libraries are not up-to-date)
+#      then CHECK_TAG is defined as a non-null string.
+#  2. The $(LIBS_CHECK) target is invoked during the nmake:
+#     If $(CHECK_TAG) is non-null, then a "libraries not up to date" exit will occur.
+#     If $(CHECK_TAG) is null, but either config.nmake or Makefile.nmake
+#      are newer than the $(LIBS_CHECK) target, then a detailed verification
+#      as to the required library package files will be made.
+#
+LIBS_CHECK=_libs_check_
+!IF [$(SH) $(WIN_SETUP) --checktag "$(WIRESHARK_LIB_DIR)"] != 0
+CHECK_TAG=_check_tag_
+!ELSE
+CHECK_TAG=
+!ENDIF
+# -------------
+
+LDFLAGS = /NOLOGO /INCREMENTAL:NO $(LOCAL_LDFLAGS)
+
+# We use GENERATED_CFLAGS to get around flex's non-LLP64-compliant output
+GENERATED_CFLAGS=\
+	$(STANDARD_CFLAGS) \
+	/I.  /Iwiretap $(GLIB_CFLAGS) \
+	$(ZLIB_CFLAGS) /I$(PCAP_DIR)\include $(AIRPCAP_CFLAGS) \
+	$(C_ARES_CFLAGS) $(ADNS_CFLAGS) $(GNUTLS_CFLAGS) \
+	$(PYTHON_CFLAGS) $(SMI_CFLAGS) $(GEOIP_CFLAGS) $(WINSPARKLE_CFLAGS)
+
+CFLAGS=$(WARNINGS_ARE_ERRORS) $(GENERATED_CFLAGS)
+
+.c.obj::
+	$(CC) $(CFLAGS) -Fd.\ -c $<
+
+PLATFORM_SRC = capture-wpcap.c capture_wpcap_packet.c capture_win_ifnames.c
+
+WTAP_PLUGIN_SOURCES = \
+       epan/plugins.c \
+       epan/report_err.c \
+       epan/filesystem.c
+
+include Makefile.common
+
+wireshark_OBJECTS = $(wireshark_SOURCES:.c=.obj)
+tshark_OBJECTS = $(tshark_SOURCES:.c=.obj)
+rawshark_OBJECTS = $(rawshark_SOURCES:.c=.obj)
+###text2pcap_OBJECTS = $(text2pcap_SOURCES:.c=.obj)
+###mergecap_OBJECTS = $(mergecap_SOURCES:.c=.obj)
+editcap_OBJECTS = $(editcap_SOURCES:.c=.obj)
+capinfos_OBJECTS = $(capinfos_SOURCES:.c=.obj)
+dftest_OBJECTS = $(dftest_SOURCES:.c=.obj)
+dumpcap_OBJECTS = $(dumpcap_SOURCES:.c=.obj)
+randpkt_OBJECTS = $(randpkt_SOURCES:.c=.obj)
+
+wireshark_LIBS= wiretap\wiretap-$(WTAP_VERSION).lib \
+	wsock32.lib user32.lib shell32.lib comctl32.lib ole32.lib \
+	$(GTHREAD_LIBS) \
+	$(HHC_LIBS) \
+	wsutil\libwsutil.lib \
+	$(GNUTLS_LIBS) \
+	$(PYTHON_LIBS) \
+	$(ZLIB_LIBS) \
+	$(WINSPARKLE_LIBS) \
+!IFDEF ENABLE_LIBWIRESHARK
+	epan\libwireshark.lib \
+!ELSE
+	epan\dissectors\dissectors.lib \
+	epan\wireshark.lib \
+	epan\crypt\airpdcap.lib \
+	epan\dfilter\dfilter.lib \
+	epan\ftypes\ftypes.lib \
+	$(C_ARES_LIBS) \
+	$(ADNS_LIBS)
+!ENDIF
+
+tshark_LIBS= wiretap\wiretap-$(WTAP_VERSION).lib \
+	wsock32.lib user32.lib \
+	$(GLIB_LIBS) \
+	$(GTHREAD_LIBS) \
+	wsutil\libwsutil.lib \
+	$(GNUTLS_LIBS) \
+	$(PYTHON_LIBS) \
+!IFDEF ENABLE_LIBWIRESHARK
+	epan\libwireshark.lib \
+!ELSE
+	epan\dissectors\dissectors.lib \
+	epan\wireshark.lib \
+	epan\crypt\airpdcap.lib \
+	epan\dfilter\dfilter.lib \
+	epan\ftypes\ftypes.lib \
+	$(C_ARES_LIBS) \
+	$(ADNS_LIBS) \
+	$(ZLIB_LIBS)
+!ENDIF
+
+rawshark_LIBS= wiretap\wiretap-$(WTAP_VERSION).lib \
+	wsock32.lib user32.lib \
+	$(GLIB_LIBS) \
+	wsutil\libwsutil.lib \
+	$(GNUTLS_LIBS) \
+	$(PYTHON_LIBS) \
+!IFDEF ENABLE_LIBWIRESHARK
+	epan\libwireshark.lib \
+!ELSE
+	epan\dissectors\dissectors.lib \
+	epan\wireshark.lib \
+	epan\crypt\airpdcap.lib \
+	epan\dfilter\dfilter.lib \
+	epan\ftypes\ftypes.lib \
+	$(C_ARES_LIBS) \
+	$(ADNS_LIBS) \
+	$(ZLIB_LIBS)
+!ENDIF
+
+capinfos_LIBS= wiretap\wiretap-$(WTAP_VERSION).lib \
+	wsock32.lib user32.lib shell32.lib \
+	wsutil\libwsutil.lib \
+	$(GLIB_LIBS) \
+	$(GCRYPT_LIBS)
+
+editcap_LIBS= wiretap\wiretap-$(WTAP_VERSION).lib \
+	wsock32.lib user32.lib shell32.lib \
+	wsutil\libwsutil.lib \
+	$(GLIB_LIBS)
+
+mergecap_LIBS= wiretap\wiretap-$(WTAP_VERSION).lib \
+	wsock32.lib user32.lib \
+	wsutil\libwsutil.lib \
+	$(GLIB_LIBS)
+
+reordercap_LIBS= wiretap\wiretap-$(WTAP_VERSION).lib \
+	wsock32.lib user32.lib \
+	wsutil\libwsutil.lib \
+	$(GLIB_LIBS)
+
+text2pcap_LIBS= \
+	wsock32.lib user32.lib \
+	wsutil\libwsutil.lib \
+	$(GLIB_LIBS)
+
+dumpcap_LIBS= \
+	wsock32.lib user32.lib \
+	wsutil\libwsutil.lib \
+	$(GLIB_LIBS) \
+	$(GTHREAD_LIBS)
+
+dftest_LIBS=  wiretap\wiretap-$(WTAP_VERSION).lib \
+	wsock32.lib user32.lib \
+	$(GLIB_LIBS) \
+	wsutil\libwsutil.lib \
+	$(GNUTLS_LIBS) \
+!IFDEF ENABLE_LIBWIRESHARK
+	epan\libwireshark.lib \
+!ELSE
+	epan\dissectors\dissectors.lib \
+	epan\wireshark.lib \
+	epan\dfilter\dfilter.lib epan\ftypes\ftypes.lib \
+	$(C_ARES_LIBS) \
+	$(ADNS_LIBS) \
+	$(ZLIB_LIBS) \
+	$(SMI_LIBS)
+!ENDIF
+
+randpkt_LIBS= wiretap\wiretap-$(WTAP_VERSION).lib \
+	user32.lib \
+	wsutil\libwsutil.lib \
+	$(GLIB_LIBS)
+
+EXECUTABLES=wireshark.exe tshark.exe rawshark.exe \
+	capinfos.exe editcap.exe mergecap.exe text2pcap.exe randpkt.exe reordercap.exe dumpcap.exe
+
+RESOURCES=image\wireshark.res image\file_dlg_win32.res \
+	image\libwireshark.res image\tshark.res image\capinfos.res \
+	image\editcap.res image\mergecap.res image\text2pcap.res \
+	image\wiretap.res image\dumpcap.res image\rawshark.res \
+	image\reordercap.res image\libwsutil.res
+
+
+all: $(LIBS_CHECK) config.h ui\qt\config.pri tools image codecs $(C_ARES_DLL) $(ADNS_DLL) $(ZLIB_DLL) wsutil wiretap epan $(EXECUTABLES) wireshark.bsc $(RESOURCES) doc help install-all
+
+!IFDEF MAKENSIS
+packaging: all
+	cd packaging
+	cd nsis
+	$(MAKE) /$(MAKEFLAGS) -f makefile.nmake
+	cd ..
+	cd ..
+!ELSE
+packaging: _FORCE_
+	@echo \? NSIS not available (MAKENSIS not defined in config.nmake)
+	@echo.
+	@exit 1
+!ENDIF
+
+packaging_u3: all
+	cd packaging
+	cd u3
+	cd win32
+	$(MAKE) /$(MAKEFLAGS) -f makefile.nmake
+	cd ..
+	cd ..
+	cd ..
+
+packaging_papps: all
+	cd packaging
+	cd portableapps
+	cd win32
+	$(MAKE) /$(MAKEFLAGS) -f makefile.nmake
+	cd ..
+	cd ..
+	cd ..
+
+# use (info-)zip from cygwin to pack things
+packaging_zip: all
+!IFDEF MSVCR_DLL
+	xcopy "$(MSVCR_DLL)" $(INSTALL_DIR)
+!ENDIF
+!IFDEF VCREDIST_EXE
+	@echo Including vcredist_$(TARGET_MACHINE).exe -- your recipient may need to run it!
+	xcopy "$(VCREDIST_EXE)" $(INSTALL_DIR)
+!ENDIF
+	rm -f wireshark.zip
+	zip -r -9 wireshark.zip $(INSTALL_DIR)/
+
+!IFDEF WIRESHARK_GENERATE_BSC_FILE
+# FIXME: Add epan\wspython\*.sbr when we support Python embedding
+# Note: Certain .sbr files cause bscmake warning "too many references... ignoring ..."
+# XXX: It seems that using .bsc files with VS2010 doesn't work (isn't supported ?)
+#      Using .bsc files with VS2008 may work
+#      See: http://ask.wireshark.org/questions/8660/wireshark-building-and-debugging-on-visual-c-or-visual-studio
+wireshark.bsc: \
+	*.sbr				\
+	codecs\*.sbr			\
+	epan\*.sbr			\
+	epan\crypt\*.sbr		\
+	epan\dfilter\*.sbr		\
+	epan\dissectors\*.sbr		\
+	epan\ftypes\*.sbr		\
+	epan\wslua\*.sbr		\
+	plugins\asn1\*.sbr		\
+	plugins\docsis\*.sbr		\
+	plugins\ethercat\*.sbr		\
+	plugins\gryphon\*.sbr		\
+	plugins\irda\*.sbr		\
+	plugins\m2m\*.sbr		\
+	plugins\mate\*.sbr		\
+	plugins\opcua\*.sbr		\
+	plugins\profinet\*.sbr		\
+	plugins\stats_tree\*.sbr	\
+	plugins\unistim\*.sbr		\
+	plugins\wimax\*.sbr		\
+	plugins\wimaxasncp\*.sbr	\
+	plugins\wimaxmacphy\*.sbr	\
+	ui\*.sbr			\
+	ui\cli\*.sbr			\
+	ui\gtk\*.sbr			\
+	ui\win32\*.sbr			\
+	wiretap\*.sbr			\
+	wsutil\*.sbr
+	$(BSCMAKE) @<<
+		/o $@ $?
+<<
+!ELSE
+wireshark.bsc:
+!ENDIF
+
+pdb_zip: all
+	cd $(INSTALL_DIR)
+	rm -f ../[Ww]ireshark-pdb-$(WIRESHARK_TARGET_PLATFORM)-$(VERSION).zip
+	zip -9 ../Wireshark-pdb-$(WIRESHARK_TARGET_PLATFORM)-$(VERSION).zip *.pdb *.lib
+	cd ..
+
+$(RESOURCES): image
+
+## Note: The proper "SUBSYSTEM" link option to be used for linking each of the Wireshark executables
+##       is specified in '$(guiflags)' or '$(conflags)' as used as part of the link options.
+##       (These variables are defined in win32.mak).
+wiretap\wiretap-$(WTAP_VERSION).lib: image $(ZLIB_DLL) wiretap
+
+wireshark.exe	: $(LIBS_CHECK) config.h $(wireshark_OBJECTS) codecs epan ui gtk win32 image\wireshark.res image\file_dlg_win32.res wsutil\libwsutil.lib wiretap\wiretap-$(WTAP_VERSION).lib codecs\codecs.lib ui\libui.lib ui\gtk\libgtkui.lib ui\win32\libgtkui_win32.lib plugins
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:$(PROGRAM_NAME).exe $(guiflags) $(guilibsdll) $(LDFLAGS) /LARGEADDRESSAWARE $(wireshark_LIBS) $(GTK_LIBS) codecs\codecs.lib ui\gtk\libgtkui.lib ui\win32\libgtkui_win32.lib ui\libui.lib $(wireshark_OBJECTS) image\wireshark.res image\file_dlg_win32.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "wireshark.exe.manifest" -outputresource:$(PROGRAM_NAME).exe;1
+!ENDIF
+
+tshark.exe	: $(LIBS_CHECK) config.h $(tshark_OBJECTS) epan ui cli image\tshark.res wsutil\libwsutil.lib wiretap\wiretap-$(WTAP_VERSION).lib plugins
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:tshark.exe $(conflags) $(conlibsdll) $(LDFLAGS) /LARGEADDRESSAWARE $(tshark_LIBS) $(tshark_OBJECTS) ui\cli\libcliui.lib ui\libui.lib image\tshark.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "tshark.exe.manifest" -outputresource:tshark.exe;1
+!ENDIF
+
+rawshark.exe	: $(LIBS_CHECK) config.h $(rawshark_OBJECTS) epan ui image\rawshark.res wsutil\libwsutil.lib wiretap\wiretap-$(WTAP_VERSION).lib plugins
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:rawshark.exe $(conflags) $(conlibsdll) $(LDFLAGS) /LARGEADDRESSAWARE $(rawshark_LIBS) $(rawshark_OBJECTS) ui\libui.lib image\rawshark.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "rawshark.exe.manifest" -outputresource:rawshark.exe;1
+!ENDIF
+
+# XXX: This makefile does not properly handle doing a 'nmake ... capinfos.exe' directly since some of the .objs
+#      (e.g. epan\plugins.obj) must be built first using epan\Makefile.nmake (which happens for 'nmake ... all').
+# Linking with setargv.obj enables "wildcard expansion" of command-line arguments
+capinfos.exe	: $(LIBS_CHECK) config.h $(capinfos_OBJECTS) wsutil\libwsutil.lib wiretap\wiretap-$(WTAP_VERSION).lib image\capinfos.res
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:capinfos.exe $(conflags) $(conlibsdll) $(LDFLAGS) $(capinfos_OBJECTS) $(capinfos_LIBS) setargv.obj image\capinfos.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "capinfos.exe.manifest" -outputresource:capinfos.exe;1
+!ENDIF
+
+# XXX: This makefile does not properly handle doing a 'nmake ... editcap.exe' directly since some of the .objs
+#      (e.g. epan\plugins.obj) must be built first using epan\Makefile.nmake (which happens for 'nmake ... all').
+editcap.exe	: $(LIBS_CHECK) config.h $(editcap_OBJECTS) wsutil\libwsutil.lib wiretap\wiretap-$(WTAP_VERSION).lib image\editcap.res
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:editcap.exe $(conflags) $(conlibsdll) $(LDFLAGS) $(editcap_OBJECTS) $(editcap_LIBS) image\editcap.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "editcap.exe.manifest" -outputresource:editcap.exe;1
+!ENDIF
+
+# Linking with setargv.obj enables "wildcard expansion" of command-line arguments
+mergecap.exe	: $(LIBS_CHECK)  config.h mergecap.obj merge.obj wsutil\libwsutil.lib wiretap\wiretap-$(WTAP_VERSION).lib image\mergecap.res
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:mergecap.exe $(conflags) $(conlibsdll) $(LDFLAGS) mergecap.obj merge.obj $(mergecap_LIBS) setargv.obj image\mergecap.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "mergecap.exe.manifest" -outputresource:mergecap.exe;1
+!ENDIF
+
+reordercap.exe	: $(LIBS_CHECK)  config.h reordercap.obj wsutil\libwsutil.lib wiretap\wiretap-$(WTAP_VERSION).lib image\reordercap.res
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:reordercap.exe $(conflags) $(conlibsdll) $(LDFLAGS) reordercap.obj $(reordercap_LIBS) setargv.obj image\reordercap.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "reordercap.exe.manifest" -outputresource:reordercap.exe;1
+!ENDIF
+
+text2pcap.exe	: $(LIBS_CHECK) config.h text2pcap.obj text2pcap-scanner.obj pcapio.obj wsutil\libwsutil.lib wiretap\wiretap-$(WTAP_VERSION).lib image\text2pcap.res
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:text2pcap.exe $(conflags) $(conlibsdll) $(LDFLAGS) text2pcap.obj text2pcap-scanner.obj pcapio.obj $(text2pcap_LIBS) image\text2pcap.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "text2pcap.exe.manifest" -outputresource:text2pcap.exe;1
+!ENDIF
+
+dftest.exe	: $(dftest_OBJECTS) epan ui
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:dftest.exe $(conflags) $(conlibsdll) $(LDFLAGS) $(dftest_LIBS) ui\libui.lib $(dftest_OBJECTS)
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "dftest.exe.manifest" -outputresource:dftest.exe;1
+!ENDIF
+
+randpkt.exe	: $(randpkt_OBJECTS)
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:randpkt.exe $(conflags) $(conlibsdll) $(LDFLAGS) $(randpkt_LIBS) $(randpkt_OBJECTS)
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "randpkt.exe.manifest" -outputresource:randpkt.exe;1
+!ENDIF
+
+dumpcap.exe	: $(LIBS_CHECK) config.h $(dumpcap_OBJECTS) wsutil\libwsutil.lib image\dumpcap.res
+	@echo Linking $@
+	$(LINK) @<<
+		/OUT:dumpcap.exe $(conflags) $(conlibsdll) $(LDFLAGS) $(dumpcap_LIBS) $(dumpcap_OBJECTS) image\dumpcap.res
+<<
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "dumpcap.exe.manifest" -outputresource:dumpcap.exe;1
+!ENDIF
+
+
+config.h	: config.h.win32 config.nmake
+	sed -e s/@VERSION@/$(VERSION)/ \
+	    -e s/@VERSION_MAJOR@/$(VERSION_MAJOR)/ \
+	    -e s/@VERSION_MINOR@/$(VERSION_MINOR)/ \
+	    -e s/@VERSION_MICRO@/$(VERSION_MICRO)/ \
+	    -e "s/@HAVE_C_ARES@/$(C_ARES_CONFIG)/" \
+	    -e "s/@HAVE_GNU_ADNS@/$(ADNS_CONFIG)/" \
+ 	    -e "s/@HAVE_KFW@/$(KFW_CONFIG)/" \
+	    -e "s/@HAVE_NETTLE@/$(NETTLE_CONFIG)/" \
+	    -e "s/@HAVE_LIBZ@/$(ZLIB_CONFIG)/" \
+	    -e "s/@HAVE_LIBPCAP@/$(WINPCAP_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_FINDALLDEVS@/$(PCAP_FINDALLDEVS_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_DATALINK_NAME_TO_VAL@/$(PCAP_DATALINK_NAME_TO_VAL_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_DATALINK_VAL_TO_NAME@/$(PCAP_DATALINK_VAL_TO_NAME_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_DATALINK_VAL_TO_DESCRIPTION@/$(PCAP_DATALINK_VAL_TO_DESCRIPTION_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_BREAKLOOP@/$(PCAP_BREAKLOOP_CONFIG)/" \
+	    -e "s/@HAVE_REMOTE@/$(PCAP_HAVE_REMOTE_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_REMOTE@/$(PCAP_REMOTE_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_OPEN@/$(PCAP_OPEN_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_OPEN_DEAD@/$(PCAP_OPEN_DEAD_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_LIST_DATALINKS@/$(PCAP_LIST_DATALINKS_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_FREE_DATALINKS@/$(PCAP_FREE_DATALINKS_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_SET_DATALINK@/$(PCAP_SET_DATALINK_CONFIG)/" \
+	    -e "s/@HAVE_PCAP_SETSAMPLING@/$(PCAP_SETSAMPLING_CONFIG)/" \
+	    -e "s/@HAVE_BPF_IMAGE@/$(BPF_IMAGE_CONFIG)/" \
+	    -e "s/@HAVE_LIBGNUTLS@/$(GNUTLS_CONFIG)/" \
+	    -e "s/@HAVE_LIBGCRYPT@/$(LIBGCRYPT_CONFIG)/" \
+	    -e "s/@HAVE_LUA@/$(LUA_CONFIG)/" \
+	    -e "s/@HAVE_LUA@/$(LUA_VERSION)/" \
+	    -e "s/@HAVE_PYTHON@/$(PYTHON_CONFIG)/" \
+	    -e "s/@HAVE_AIRPCAP@/$(AIRPCAP_CONFIG)/" \
+	    -e "s/@HAVE_AIRPDCAP@/$(AIRPDCAP_CONFIG)/" \
+	    -e "s/@HAVE_LIBPORTAUDIO@/$(PORTAUDIO_CONFIG)/" \
+	    -e "s/@PORTAUDIO_API_1@/$(PORTAUDIO_API_CONFIG)/" \
+	    -e "s/@HAVE_SMI@/$(SMI_CONFIG)/" \
+	    -e "s/@HAVE_GEOIP@/$(GEOIP_CONFIG)/" \
+	    -e "s/@HAVE_GEOIP_V6@/$(GEOIP_V6_CONFIG)/" \
+	    -e "s/@HAVE_SOFTWARE_UPDATE@/$(WINSPARKLE_CONFIG)/" \
+	    -e "s/@INET6@/$(INET6_CONFIG)/" \
+	    -e "s/@HAVE_NTDDNDIS_H@/$(NTDDNDIS_CONFIG)/" \
+	    -e "s/@PCAP_NG_DEFAULT@/$(PCAP_NG_DEFAULT)/" \
+	    -e "s/@WANT_PACKET_EDITOR@/$(WANT_PACKET_EDITOR)/" \
+	    < config.h.win32 > $@
+
+ui\qt\config.pri: config.nmake Makefile.nmake
+	@echo Creating <<ui\qt\config.pri
+# Automatically generated from Makefile.nmake. Edit there, not here.
+# qmake apparently requires a three-part numeric VERSION.
+PROGRAM_NAME = $(PROGRAM_NAME)
+VERSION = $(VERSION_MAJOR).$(VERSION_MINOR).$(VERSION_MICRO)
+VERSION_FULL = $(VERSION)
+WTAP_VERSION = $(WTAP_VERSION)
+INSTALL_DIR = $(INSTALL_DIR)
+!IFDEF MANIFEST_INFO_REQUIRED
+CONFIG += wireshark_manifest_info_required
+!ENDIF
+!IFDEF KFW_DIR
+CONFIG += wireshark_use_kfw
+!ENDIF
+WIRESHARK_LIB_DIR = $(WIRESHARK_LIB_DIR:\=/)
+GLIB_DIR = $(GTK_DIR:\=/)
+C_ARES_DIR = $(C_ARES_DIR:\=/)
+ZLIB_DIR = $(ZLIB_DIR:\=/)
+GNUTLS_DIR = $(GNUTLS_DIR:\=/)
+SMI_DIR = $(SMI_DIR:\=/)
+KFW_DIR = $(KFW_DIR:\=/)
+LUA_DIR = $(LUA_DIR:\=/)
+PORTAUDIO_DIR = $(PORTAUDIO_DIR:\=/)
+GEOIP_DIR = $(GEOIP_DIR:\=/)
+WINSPARKLE_DIR = $(WINSPARKLE_DIR:\=/)
+
+INTL_DLL = $(INTL_DLL)
+
+guilibsdll = $(guilibsdll)
+
+HHC_LIBS = $(HHC_LIBS)
+
+MSVC_VARIANT = $(MSVC_VARIANT)
+MSVCR_DLL = "$(MSVCR_DLL:\=/)"
+
+QMAKE_CFLAGS         *= $(STANDARD_CFLAGS) $(PORTAUDIO_CFLAGS:\=/)
+QMAKE_CXXFLAGS       *= $(STANDARD_CFLAGS) $(PORTAUDIO_CFLAGS:\=/)
+QMAKE_LFLAGS         *= /LARGEADDRESSAWARE $(LDFLAGS)
+
+<<KEEP
+
+ps.c: tools\rdps.py print.ps
+	$(PYTHON) tools\rdps.py print.ps ps.c
+#
+# Build the version string
+#
+!IF EXIST(".svn/wc.db")
+SVNENTRIES = .svn/wc.db
+!ELSE IF EXIST(".svn/entries")
+SVNENTRIES = .svn/entries
+!ELSE
+SVNENTRIES =
+!ENDIF
+svnversion.h: $(SVNENTRIES)
+	rm -f svnversion.h
+	$(PERL) make-version.pl
+
+
+text2pcap-scanner.c : text2pcap-scanner.l
+	$(LEX) -otext2pcap-scanner.c text2pcap-scanner.l
+
+text2pcap-scanner.obj : text2pcap-scanner.c
+	$(CC) $(GENERATED_CFLAGS) -Fd.\ -c $?
+
+#
+# The following targets will rebuild their respective objs
+# if and when svnversion.h should change.
+#
+text2pcap.obj mergecap.obj capinfos.obj editcap.obj reordercap.obj version_info.obj: svnversion.h
+
+
+clean-local:
+	rm -f $(wireshark_OBJECTS) $(tshark_OBJECTS) $(dumpcap_OBJECTS) $(rawshark_OBJECTS) \
+ 		$(EXECUTABLES) *.pdb *.sbr *.exe.manifest \
+		capinfos.obj capinfos.exp editcap.obj editcap.exp \
+		mergecap.obj text2pcap.obj \
+		reordercap.obj nio-ie5.obj update.obj \
+		text2pcap-scanner.obj text2pcap-scanner.c rdps.obj \
+		rdps.pdb rdps.exe rdps.ilk config.h ps.c $(LIBS_CHECK) \
+		dftest.obj dftest.exe randpkt.obj randpkt.ext \
+		doxygen.cfg \
+		$(RESOURCES) libwireshark.dll wiretap-$(WTAP_VERSION).dll \
+		libwsutil.dll \
+		wireshark.bsc
+	rm -rf $(INSTALL_DIR)
+
+clean: clean-local
+	cd asn1
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../wiretap
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../wsutil
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../codecs
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../ui
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd gtk
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../cli
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../../epan
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../plugins
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../tools
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../image
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../doc
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../docbook
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../help
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../packaging/nsis
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../u3/win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../../portableapps/win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake clean
+	cd ../../..
+
+# "distclean" removes all files not part of the distribution.
+# It does not remove generated files that are part of the distribution.
+distclean-local: clean-local
+!IFDEF ADNS_DIR
+	rm -f $(ADNS_DLL) $(ADNS_LIBS)
+!ENDIF
+!IFDEF ZLIB_DIR
+	rm -f $(ZLIB_DLL) $(ZLIB_DIR)\zlib1.dll.manifest \
+		$(ZLIB_DIR)\include\zlib.h $(ZLIB_DIR)\include\zconf.h \
+		$(ZLIB_DIR)\lib\zdll.lib
+!ENDIF
+	rm -f config.h $(BUILT_SOURCES) wireshark-pdb*.zip
+
+distclean: distclean-local
+	cd wiretap
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../wsutil
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../codecs
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../ui
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd gtk
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../cli
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../../epan
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../plugins
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../tools
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../image
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../doc
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../docbook
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../help
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../packaging/nsis
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../u3/win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../../portableapps/win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake distclean
+	cd ../../..
+
+# Make "maintainer-clean" only if you would like to remove ALL generated
+# files.
+# Be sure to have python and perl installed to regenerate them.
+maintainer-clean-local: distclean-local
+	rm -f $(GENERATED_FILES)
+
+maintainer-clean: maintainer-clean-local
+	cd wiretap
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../wsutil
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../codecs
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../ui
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd gtk
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../cli
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../../epan
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../plugins
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../tools
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../image
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../doc
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../docbook
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../help
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../packaging/nsis
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../u3/win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../../portableapps/win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake maintainer-clean
+	cd ../../..
+
+tools::
+	cd tools
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+image::
+	cd image
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+!IFDEF ADNS_DIR
+# MSVC variants supported by Wireshark have to avoid indirectly using msvcrt.dll,
+# therefore compile the adns dll from source ADNS_DIR package.
+# To avoid path problems, copy the adns sources to a temp dir,
+# compile and copy the resulting files back to (source) ADNS_DIR
+#
+# Unfortunately:
+# - we need to "patch" adns_dll.rep and adns_dll.rc (at least for MSVC2005EE)
+#
+$(ADNS_DLL):
+	xcopy $(ADNS_DIR) adns.tmp /D /I /E /Y
+	copy adns_dll.dep adns.tmp\adns_win32\adns_dll
+	copy adns_dll.rc adns.tmp\adns_win32\adns_dll
+	cd adns.tmp\adns_win32\adns_dll
+	set CFG=adns_dll - Win32 Release
+	$(MAKE) /$(MAKEFLAGS) -f adns_dll.mak LOC="$(LOCAL_CFLAGS)"
+	cd ..\lib
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "adns_dll.dll.manifest" -outputresource:adns_dll.dll;2
+!ENDIF
+	if not exist "$(WIRESHARK_LIB_DIR)\$(MSVC_VARIANT)\adns" mkdir "$(WIRESHARK_LIB_DIR)\$(MSVC_VARIANT)\adns"
+	copy adns_dll.dll $(ADNS_DLL)
+	copy adns_dll.lib $(ADNS_LIBS)
+	cd ..\..\..
+	rm -r -f adns.tmp
+!ENDIF
+
+!IFDEF ZLIB_DIR
+# MSVC variants supported by Wireshark have to avoid indirectly using msvcrt.dll,
+# therefore compile the zlib dll from source ZLIB_DIR package.
+# To avoid path problems, copy the zlib sources to a temp dir,
+# compile and copy the resulting files back to (source) ZLIB_DIR
+$(ZLIB_DLL):
+	xcopy $(ZLIB_DIR) zlib.tmp /D /I /E /Y
+	cd zlib.tmp
+!if "$(WIRESHARK_TARGET_PLATFORM)" == "win32"
+	$(MAKE) /$(MAKEFLAGS) -f win32/Makefile.msc zlib1.dll LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj"
+!else
+	$(MAKE) /$(MAKEFLAGS) -f win32/Makefile.msc zlib1.dll AS=ml64 LOC="-DASMV -DASMINF" OBJA="inffasx64.obj gvmat64.obj inffas8664.obj"
+!endif
+	if not exist $(ZLIB_DIR) mkdir $(ZLIB_DIR)
+	if not exist $(ZLIB_DIR)\lib mkdir $(ZLIB_DIR)\lib
+	if not exist $(ZLIB_DIR)\include mkdir $(ZLIB_DIR)\include
+!IFDEF MANIFEST_INFO_REQUIRED
+	mt.exe -nologo -manifest "zlib1.dll.manifest" -outputresource:zlib1.dll;2
+!ENDIF
+	copy zlib1.dll $(ZLIB_DIR)
+	copy zdll.lib $(ZLIB_DIR)\lib
+	copy zconf.h $(ZLIB_DIR)\include
+	copy zlib.h $(ZLIB_DIR)\include
+	cd ..
+	rm -r -f zlib.tmp
+!ENDIF
+
+wsutil::
+	cd wsutil
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+wiretap::
+	cd wiretap
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+codecs::
+	cd codecs
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+ui:: help config.h svnversion.h doxygen
+	cd ui
+	$(MAKE) /$(MAKEFLAGS) /f Makefile.nmake libui.lib
+	cd ..
+
+gtk:: help config.h svnversion.h doxygen
+	cd ui/gtk
+	$(MAKE) /$(MAKEFLAGS) /f Makefile.nmake libgtkui.lib
+	cd ../..
+
+win32::
+	cd ui/win32
+	$(MAKE) /$(MAKEFLAGS) /f Makefile.nmake libgtkui_win32.lib
+	cd ../..
+
+cli:: help config.h svnversion.h doxygen
+	cd ui/cli
+	$(MAKE) /$(MAKEFLAGS) /f Makefile.nmake libcliui.lib
+	cd ../..
+
+epan:: $(RESOURCES) $(ZLIB_DLL) wiretap\wiretap-$(WTAP_VERSION).lib $(BUILT_SOURCES) doxygen
+	cd epan
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+plugins::
+	cd plugins
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+doc::
+	cd doc
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+docbook::
+	cd docbook
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+help::
+	cd help
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake
+	cd ..
+
+doxygen.cfg: config.nmake doxygen.cfg.in
+	sed -e s/@VERSION@/$(VERSION)/ \
+	    < doxygen.cfg.in > $@
+
+doxygen-run:
+!IFDEF DOXYGEN
+	$(DOXYGEN) doxygen.cfg
+!ENDIF
+
+doxygen: doxygen.cfg doxygen-run
+
+services: tools\make-services.pl
+	$(PERL) tools/make-services.pl
+
+################################################################################
+# Prepare build environment by downloading and installing required libraries
+################################################################################
+
+# The required tools to build Wireshark.
+#
+# The 'find' tool is available both in \WINNT\System32 and in cygwin's /usr/bin.
+# We only need the cygwin version (for some shell scripts).
+# In the PATH, System32 is before cygwin's dir, so explicitly check for /usr/bin/find.
+REQUIRED_TOOLS=\
+	$(CC) \
+	$(LINK) \
+	nmake \
+!IFDEF MANIFEST_INFO_REQUIRED
+	--windowsonly mt	\
+!ENDIF
+	$(SH_PROG)	\
+	$(YACC)	\
+	$(LEX)	\
+	env	\
+	grep	\
+	--cygwinonly /usr/bin/find	\
+	peflags \
+	$(PERL)	\
+	$(PYTHON)	\
+	sed	\
+	unzip	\
+	wget
+
+verify_tools:
+# As win-setup.sh assumes the dir exists create it if it doesn't
+	@if not exist "$(WIRESHARK_LIB_DIR)" md "$(WIRESHARK_LIB_DIR)"
+	@$(SH) $(WIN_SETUP) --appverify $(REQUIRED_TOOLS)
+
+# Targets and etc used to verify or download libraries
+
+!IFNDEF WIN_SETUP_OPT
+WIN_SETUP_OPT=--download
+!ENDIF
+
+# Verify that the required library 'package' (zip) files have been downloaded.
+# (It seems reasonable to assume that if the files have been downloaded
+#  then they have been installed).
+check_libs:
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake WIN_SETUP_OPT=--libverify process_libs
+
+# Verify library packages:
+#  If $(CHECK_TAG) is non-null then checktag failed; Exit with an error message. (See beginning of this Makefile).
+#  Otherwise do detailed library package files verification only if Makefile.nmake or config.make have been updated
+#  (or dummy file doesn't exist because of 'make clean' or whatever).
+#  Note that the creation/modification time of a file after an svn update of that file
+#   is the time of the update (not the time of the file in the repository).
+# touch is only called if libverify succeeds.
+$(LIBS_CHECK):  $(CHECK_TAG) config.nmake Makefile.nmake
+	@echo  Verifying library package files ...
+	@$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake WIN_SETUP_OPT=--libverify process_libs
+	@touch $@
+
+# Target for "checktag failed" (libraries not up to date).
+# Defined only if "checktag" failed (see beginning of this Makefile).
+!IF "$(CHECK_TAG)" != ""
+$(CHECK_TAG): _FORCE_
+	@echo \? Wireshark Libraries not up-to-date \?
+	@echo \? Do you need to run "nmake -f Makefile.nmake setup" \?
+	@echo.
+	@exit 1
+
+!ENDIF
+
+# Download (if needed) and install all the required libraries into WIRESHARK_LIB_DIR.
+# A clean_setup is done first to ensure that the target dirs don't
+# contain old files remaining from a previous setup run.
+setup: verify_tools clean_setup process_libs
+
+
+# The process_libs target when invoked causes either a --libverify or a --download for all the required libraries.
+# (The choice is determined by the value of the macro WIN_SETUP_OPT).
+process_libs:
+	@if not exist "$(WIRESHARK_LIB_DIR)" md "$(WIRESHARK_LIB_DIR)"
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. WinPcap_$(PCAP_VERSION).exe
+!IFDEF GTK_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		"$(GTK_NAME)" gtk+-bundle_$(GTK_PKG)_$(WIRESHARK_TARGET_PLATFORM)$(PKG_SUFIX).zip
+!ENDIF
+!IFDEF KFW_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. kfw-3-2-2-i386-ws-vc6.zip
+#	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+#		. kfw-3-2-2.zip
+!ENDIF
+!IFDEF PCAP_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. WpdPack_$(WPD_VERSION).zip
+!ENDIF
+!IFDEF AIRPCAP_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		AirPcap_Devpack_4_1_0_1622 AirPcap_Devpack_4_1_0_1622.zip
+!ENDIF
+!IFDEF C_ARES_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. c-ares-$(C_ARES_PKG)-$(WIRESHARK_TARGET_PLATFORM)ws.zip
+!ENDIF
+!IFDEF ADNS_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. adns-1.0-win32-05ws.zip
+!ENDIF
+!IFDEF ZLIB_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+!if "$(WIRESHARK_TARGET_PLATFORM)" == "win32"
+		zlib125 zlib-1.2.5.zip
+!else
+		zlib125 zlib125ws.zip
+!endif
+!ENDIF
+!IFDEF LUA_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		lua5.1.4 lua$(LUA_DIST)_lib.zip
+!ENDIF
+
+!IFDEF GNUTLS_PKG
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. gnutls-$(GNUTLS_PKG)-$(WIRESHARK_TARGET_PLATFORM)ws.zip
+!ENDIF
+!IFDEF PORTAUDIO_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. portaudio_v19_2.zip
+!ENDIF
+!IFDEF SMI_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. libsmi-$(SMI_PKG)-$(WIRESHARK_TARGET_PLATFORM)ws.zip
+!ENDIF
+!IFDEF GEOIP_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		GeoIP-$(GEOIP_PKG)-$(WIRESHARK_TARGET_PLATFORM)ws GeoIP-$(GEOIP_PKG)-$(WIRESHARK_TARGET_PLATFORM)ws.zip
+!ENDIF
+!IFDEF WINSPARKLE_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. WinSparkle-$(WINSPARKLE_PKG).zip
+!ENDIF
+!IFDEF HHC_DIR
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		user-guide user-guide-46501.zip
+!ENDIF
+!IFDEF UPX
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. upx303w.zip
+!ENDIF
+!IFDEF NASM
+	@$(SH) $(WIN_SETUP) "$(WIN_SETUP_OPT)" "$(WIRESHARK_LIB_DIR)" \
+		. nasm-2.09.08-win32.zip
+!ENDIF
+!IF "$(WIN_SETUP_OPT)" == "--download"
+	@$(SH) $(WIN_SETUP) --settag "$(WIRESHARK_LIB_DIR)"
+!ENDIF
+	@echo.
+	@echo Wireshark is ready to build.
+
+# Cleanup files installed by the setup target. It will not remove the
+# downloaded zip files.
+# WHEN UPDATING LIBRARY VERSIONS, KEEP ALSO ONE FORMER VERSION SO
+# UPDATING REMOVES THE FORMER USER DIRS
+clean_setup:
+    cd "$(WIRESHARK_LIB_DIR)"
+    rm -r -f adns-1.0-win32-05ws
+    rm -r -f c-ares-1.5.3ws
+    rm -r -f c-ares-1.6.0ws
+    rm -r -f c-ares-1.7.0-win??ws
+    rm -r -f c-ares-1.7.1-win??ws
+    rm -r -f c-ares-1.9.1-win??ws
+    rm -r -f gettext-0.14.5
+    rm -r -f gettext-runtime-0.17
+    rm -r -f gettext-runtime-0.17-1
+    rm -r -f gettext-0.17-1            # win64
+    rm -r -f glib
+    rm -r -f gnutls-2.8.1-1
+    rm -r -f gnutls-2.8.5-*-win??ws
+    rm -r -f gnutls-2.10.3-*-win??ws
+    rm -r -f gnutls-2.12.18-*-win??ws
+!IF "$(GTK_NAME)" == "gtk2"
+    rm -r -f gtk2
+!ELSE
+    rm -r -f gtk3
+!ENDIF
+    rm -r -f gtk+
+    rm -r -f gtk-wimp
+    rm -r -f kfw-2.5
+    rm -r -f kfw-3-2-2-final
+    rm -r -f kfw-3.2.2-ws1
+    rm -r -f kfw-3-2-2-i386-ws-vc6
+    rm -r -f libiconv-1.9.1.bin.woe32
+    rm -r -f lua5.1
+    rm -r -f lua5.1.4
+    rm -r -f libsmi-0.4.5
+    rm -r -f libsmi-0.4.8
+    rm -r -f libsmi-svn-40773-win??ws
+    rm -r -f nasm-2.00
+    rm -r -f nasm-2.02
+    rm -r -f nasm-2.09.08
+    rm -r -f pcre-6.4
+    rm -r -f pcre-7.0
+    rm -r -f portaudio_v19
+    rm -r -f portaudio_v19_2
+    rm -r -f upx301w
+    rm -r -f upx303w
+    rm -r -f user-guide
+    rm -r -f zlib123
+    rm -r -f zlib125
+    rm -r -f zlib-1.2.5
+    rm -r -f zlib123-dll
+    rm -r -f AirPcap_Devpack_1_0_0_594
+    rm -r -f AirPcap_Devpack_4_0_0_1480
+    rm -r -f AirPcap_Devpack_4_1_0_1622
+    rm -r -f GeoIP-1.4.5ws
+    rm -r -f GeoIP-1.4.6-win??ws
+    rm -r -f GeoIP-1.4.8-win??ws
+    rm -r -f GeoIP-1.4.8-*-win??ws
+    rm -r -f WinSparkle-0.3-44-g2c8d9d3-win??ws
+    rm -r -f WpdPack
+    cd "$(MAKEDIR)"
+
+################################################################################
+# Prepare the debug trees for running Wireshark/Tshark from there.
+################################################################################
+
+
+# prepare debugging of Wireshark in INSTALL_DIR
+debug-wireshark: wireshark.exe install-generated-files
+
+# prepare debugging of tshark in INSTALL_DIR
+debug-tshark: tshark.exe install-generated-files
+
+# prepare debugging of rawshark in INSTALL_DIR
+debug-rawshark: rawshark.exe install-generated-files
+
+# prepare debugging of dumpcap in INSTALL_DIR
+debug-dumpcap: dumpcap.exe install-generated-files
+
+
+# install generated files (exe, "our" libs, ...)
+install-generated-files:
+	set copycmd=/y
+	if not exist $(INSTALL_DIR) mkdir $(INSTALL_DIR)
+!IF DEFINED (MSVCR_DLL) && "$(MSVC_VARIANT)" == "MSVC2008"
+	xcopy "$(MSVCR_DLL)" $(INSTALL_DIR)\*.* /d
+!ENDIF
+!IFDEF ENABLE_LIBWIRESHARK
+	xcopy epan\libwireshark.dll $(INSTALL_DIR) /d
+	if exist epan\libwireshark.lib xcopy .\epan\libwireshark.lib $(INSTALL_DIR) /d
+	if exist epan\libwireshark.pdb xcopy .\epan\libwireshark.pdb $(INSTALL_DIR) /d
+!ENDIF
+	xcopy ".\wiretap\wiretap-$(WTAP_VERSION).dll" $(INSTALL_DIR) /d
+	if exist ".\wiretap\wiretap-$(WTAP_VERSION).lib" xcopy ".\wiretap\wiretap-$(WTAP_VERSION).lib" $(INSTALL_DIR) /d
+	if exist ".\wiretap\wiretap-$(WTAP_VERSION).pdb" xcopy ".\wiretap\wiretap-$(WTAP_VERSION).pdb" $(INSTALL_DIR) /d
+	xcopy ".\wsutil\libwsutil.dll" $(INSTALL_DIR) /d
+	if exist ".\wsutil\libwsutil.lib" xcopy ".\wsutil\libwsutil.lib" $(INSTALL_DIR) /d
+	if exist ".\wsutil\libwsutil.pdb" xcopy ".\wsutil\libwsutil.pdb" $(INSTALL_DIR) /d
+	if exist $(PROGRAM_NAME).exe xcopy $(PROGRAM_NAME).exe $(INSTALL_DIR) /d
+	if exist $(PROGRAM_NAME).pdb xcopy $(PROGRAM_NAME).pdb $(INSTALL_DIR) /d
+	if exist $(PROGRAM_NAME).bsc xcopy $(PROGRAM_NAME).bsc $(INSTALL_DIR) /d
+	if exist ".\docbook\user-guide.chm" xcopy ".\docbook\user-guide.chm" $(INSTALL_DIR) /d
+	if exist capinfos.exe xcopy capinfos.exe $(INSTALL_DIR) /d
+	if exist capinfos.pdb xcopy capinfos.pdb $(INSTALL_DIR) /d
+	if exist dumpcap.exe xcopy dumpcap.exe $(INSTALL_DIR) /d
+	if exist dumpcap.pdb xcopy dumpcap.pdb $(INSTALL_DIR) /d
+	if exist editcap.exe xcopy editcap.exe $(INSTALL_DIR) /d
+	if exist editcap.pdb xcopy editcap.pdb $(INSTALL_DIR) /d
+	if exist mergecap.exe xcopy mergecap.exe $(INSTALL_DIR) /d
+	if exist mergecap.pdb xcopy mergecap.pdb $(INSTALL_DIR) /d
+	if exist reordercap.exe xcopy reordercap.exe $(INSTALL_DIR) /d
+	if exist reordercap.pdb xcopy reordercap.pdb $(INSTALL_DIR) /d
+	if exist rawshark.exe xcopy rawshark.exe $(INSTALL_DIR) /d
+	if exist rawshark.pdb xcopy rawshark.pdb $(INSTALL_DIR) /d
+	if exist text2pcap.exe xcopy text2pcap.exe $(INSTALL_DIR) /d
+	if exist text2pcap.pdb xcopy text2pcap.pdb $(INSTALL_DIR) /d
+	if exist tshark.exe xcopy tshark.exe $(INSTALL_DIR) /d
+	if exist tshark.pdb xcopy tshark.pdb $(INSTALL_DIR) /d
+	xcopy "doc\AUTHORS-SHORT" $(INSTALL_DIR) /d
+	xcopy ".\manuf" $(INSTALL_DIR) /d
+	xcopy ".\services" $(INSTALL_DIR) /d
+	xcopy ".\pdml2html.xsl" $(INSTALL_DIR) /d
+	$(TEXTIFY) "./COPYING" $(INSTALL_DIR)
+	$(TEXTIFY) "./NEWS" $(INSTALL_DIR)
+	$(TEXTIFY) "./README" $(INSTALL_DIR)
+	$(TEXTIFY) "./README.windows" $(INSTALL_DIR)
+	xcopy ".\cfilters" $(INSTALL_DIR) /d
+	xcopy ".\colorfilters" $(INSTALL_DIR) /d
+	xcopy ".\dfilters" $(INSTALL_DIR) /d
+	xcopy ".\smi_modules" $(INSTALL_DIR) /d
+!IFDEF LUA_DIR
+	xcopy ".\epan\wslua\init.lua" $(INSTALL_DIR) /d
+	xcopy ".\epan\wslua\console.lua" $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF PYTHON_DIR
+	if not exist $(INSTALL_DIR)\python mkdir $(INSTALL_DIR)\python
+	xcopy ".\epan\wspython\register-dissector.py" $(INSTALL_DIR)\python /d
+	xcopy ".\epan\wspython\wspy_dissector.py" $(INSTALL_DIR)\python /d
+	xcopy ".\epan\wspython\wspy_libws.py" $(INSTALL_DIR)\python /d
+!ENDIF
+	xcopy ipmap.html $(INSTALL_DIR) /d
+	xcopy doc\*.html $(INSTALL_DIR) /d
+	if not exist $(INSTALL_DIR)\help mkdir $(INSTALL_DIR)\help
+	xcopy ".\help\*.*" $(INSTALL_DIR)\help /d
+# you can't reliably use xcopy to rename files "on the fly" (so copy first, then rename)
+	xcopy ".\help\faq.txt" $(INSTALL_DIR) /d
+	$(UNIX2DOS) $(INSTALL_DIR)/help/*.txt
+	if not exist $(INSTALL_DIR)\dtds mkdir $(INSTALL_DIR)\dtds
+	xcopy ".\dtds\*.*" $(INSTALL_DIR)\dtds /d
+	if not exist $(INSTALL_DIR)\asn1 mkdir $(INSTALL_DIR)\asn1
+	echo create empty asn1 default.tt file to prevent problems 2> $(INSTALL_DIR)\asn1\default.tt
+	if not exist $(INSTALL_DIR)\radius mkdir $(INSTALL_DIR)\radius
+	xcopy ".\radius\*.*" $(INSTALL_DIR)\radius /d
+	if not exist $(INSTALL_DIR)\diameter mkdir $(INSTALL_DIR)\diameter
+	xcopy ".\diameter\*.dtd" $(INSTALL_DIR)\diameter /d
+	xcopy ".\diameter\*.xml" $(INSTALL_DIR)\diameter /d
+	if not exist $(INSTALL_DIR)\tpncp mkdir $(INSTALL_DIR)\tpncp
+	xcopy ".\tpncp\*.dat" $(INSTALL_DIR)\tpncp /d
+	if not exist $(INSTALL_DIR)\wimaxasncp mkdir $(INSTALL_DIR)\wimaxasncp
+	xcopy ".\wimaxasncp\*.*" $(INSTALL_DIR)\wimaxasncp /d
+	if not exist $(INSTALL_DIR)\plugins mkdir $(INSTALL_DIR)\plugins
+	if not exist $(INSTALL_DIR)\plugins\$(VERSION) mkdir $(INSTALL_DIR)\plugins\$(VERSION)
+	cd plugins
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake install-plugins
+	cd ..
+
+# "install-all" will copy all files needed to run Wireshark/Tshark
+# to the INSTALL_DIR, so you can run/debug Wireshark/Tshark from there.
+install-all: install-generated-files
+	set copycmd=/y
+	if not exist $(INSTALL_DIR) mkdir $(INSTALL_DIR)
+!IF "$(GTK_INST_VERSION)" == "3.4"
+	xcopy $(GTK_DIR)\bin\libgdk-3-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libgtk-3-0.dll $(INSTALL_DIR) /d
+!ELSE
+	xcopy $(GTK_DIR)\bin\libgdk-win32-2.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libgtk-win32-2.0-0.dll $(INSTALL_DIR) /d
+!ENDIF
+	xcopy $(GTK_DIR)\bin\libgdk_pixbuf-2.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libatk-1.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libpango-1.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libpangowin32-1.0-0.dll $(INSTALL_DIR) /d
+	if not exist $(INSTALL_DIR)\lib mkdir $(INSTALL_DIR)\lib
+	if not exist $(INSTALL_DIR)\etc mkdir $(INSTALL_DIR)\etc
+	if not exist $(INSTALL_DIR)\$(GTK_ETC_DIR) mkdir $(INSTALL_DIR)\$(GTK_ETC_DIR)
+	xcopy $(GTK_DIR)\$(GTK_ETC_DIR)\*.* $(INSTALL_DIR)\$(GTK_ETC_DIR) /d
+#	if not exist $(INSTALL_DIR)\etc\pango mkdir $(INSTALL_DIR)\etc\pango
+#	xcopy $(GTK_DIR)\etc\pango\pango.* $(INSTALL_DIR)\etc\pango /d
+!IF "$(GTK_INST_VERSION)" == "3.4"
+	if not exist $(INSTALL_DIR)\lib\gtk-3.0 mkdir $(INSTALL_DIR)\lib\gtk-3.0
+	if not exist $(INSTALL_DIR)\lib\gtk-3.0\$(GTK_LIB_DIR) mkdir $(INSTALL_DIR)\lib\gtk-3.0\$(GTK_LIB_DIR)
+	xcopy ".\ui\win32\settings.ini" $(INSTALL_DIR)\$(GTK_ETC_DIR) /d
+!ELSE
+	if not exist $(INSTALL_DIR)\lib\gtk-2.0 mkdir $(INSTALL_DIR)\lib\gtk-2.0
+	if not exist $(INSTALL_DIR)\lib\gtk-2.0\$(GTK_LIB_DIR) mkdir $(INSTALL_DIR)\lib\gtk-2.0\$(GTK_LIB_DIR)
+	if not exist $(INSTALL_DIR)\lib\gtk-2.0\$(GTK_LIB_DIR)\loaders mkdir $(INSTALL_DIR)\lib\gtk-2.0\$(GTK_LIB_DIR)\loaders
+	if exist $(GTK_DIR)\lib\gtk-2.0\$(GTK_LIB_DIR)\loaders xcopy $(GTK_DIR)\lib\gtk-2.0\$(GTK_LIB_DIR)\loaders\libpixbufloader-*.dll $(INSTALL_DIR)\lib\gtk-2.0\$(GTK_LIB_DIR)\loaders /d
+!ENDIF
+!IFDEF GTK_ENGINES_DIR
+	if not exist $(INSTALL_DIR)\$(GTK_ENGINES_DIR) mkdir $(INSTALL_DIR)\$(GTK_ENGINES_DIR)
+	xcopy $(GTK_DIR)\$(GTK_ENGINES_DIR)\libpixmap.dll $(INSTALL_DIR)\$(GTK_ENGINES_DIR) /d
+	xcopy $(GTK_DIR)\$(GTK_ENGINES_DIR)\libwimp.dll $(INSTALL_DIR)\$(GTK_ENGINES_DIR) /d
+!ENDIF
+!IFDEF GTK_THEMES_DIR
+	xcopy "$(GTK_DIR)\$(GTK_THEMES_DIR)\gtkrc" $(INSTALL_DIR)\$(GTK_ETC_DIR) /d
+!ENDIF
+!IFDEF GTK_MODULES_DIR
+	if not exist $(INSTALL_DIR)\$(GTK_MODULES_DIR) mkdir $(INSTALL_DIR)\$(GTK_MODULES_DIR)
+	xcopy $(GTK_DIR)\$(GTK_MODULES_DIR)\libgail.dll $(INSTALL_DIR)\$(GTK_MODULES_DIR) /d
+!ENDIF
+!IFDEF NEED_CAIRO_GOBJECT_DLL
+	xcopy $(GTK_DIR)\bin\libcairo-gobject-2.dll $(INSTALL_DIR)  /d
+!ENDIF
+!IFDEF NEED_CAIRO_DLL
+	xcopy $(GTK_DIR)\bin\libcairo-2.dll $(INSTALL_DIR)  /d
+	xcopy $(GTK_DIR)\bin\libpangocairo-1.0-0.dll $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_EXPAT_DLL
+	xcopy $(GTK_DIR)\bin\$(EXPAT_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_FFI_DLL
+	xcopy $(GTK_DIR)\bin\$(FFI_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_FONTCONFIG_DLL
+	xcopy $(GTK_DIR)\bin\$(FONTCONFIG_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_FREETYPE_DLL
+	xcopy $(GTK_DIR)\bin\libpangoft2-1.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\$(FREETYPE_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_JASPER_DLL
+	xcopy $(GTK_DIR)\bin\$(JASPER_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_JPEG_DLL
+	xcopy $(GTK_DIR)\bin\$(JPEG_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_LZMA_DLL
+	xcopy $(GTK_DIR)\bin\$(LZMA_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_PIXMAN_DLL
+	xcopy $(GTK_DIR)\bin\$(PIXMAN_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_PNG_DLL
+	xcopy $(GTK_DIR)\bin\$(PNG_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_TIFF_DLL
+	xcopy $(GTK_DIR)\bin\$(TIFF_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF NEED_XML_DLL
+	xcopy $(GTK_DIR)\bin\$(XML_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF GTK_SCHEMAS_DIR
+	if not exist $(INSTALL_DIR)\$(GTK_SCHEMAS_DIR) mkdir $(INSTALL_DIR)\$(GTK_SCHEMAS_DIR)
+	if not exist $(GTK_DIR)\$(GTK_SCHEMAS_DIR)\gschemas.compiled $(GTK_DIR)\bin\glib-compile-schemas $(GTK_DIR)\$(GTK_SCHEMAS_DIR)
+	xcopy $(GTK_DIR)\$(GTK_SCHEMAS_DIR)\gschemas.compiled  $(INSTALL_DIR)\$(GTK_SCHEMAS_DIR) /d
+!ENDIF
+	xcopy $(GTK_DIR)\bin\libgio-2.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libglib-2.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libgmodule-2.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libgobject-2.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\libgthread-2.0-0.dll $(INSTALL_DIR) /d
+	xcopy $(GTK_DIR)\bin\$(INTL_DLL) $(INSTALL_DIR) /d
+!IFDEF ZLIB_DIR
+	xcopy $(ZLIB_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF C_ARES_DIR
+	xcopy $(C_ARES_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF ADNS_DIR
+	xcopy $(ADNS_DLL) $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF KFW_DIR
+	xcopy $(KFW_PATH)\comerr32.dll $(INSTALL_DIR) /d
+	xcopy $(KFW_PATH)\krb5_32.dll $(INSTALL_DIR) /d
+	xcopy $(KFW_PATH)\k5sprt32.dll $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF GNUTLS_DIR
+	xcopy $(GNUTLS_DIR)\bin\libgcrypt-11.dll $(INSTALL_DIR) /d
+	xcopy $(GNUTLS_DIR)\bin\libgnutls-26.dll $(INSTALL_DIR) /d
+	xcopy $(GNUTLS_DIR)\bin\libgpg-error-0.dll $(INSTALL_DIR) /d
+	xcopy $(GNUTLS_DIR)\bin\libtasn1-3.dll $(INSTALL_DIR) /d
+! IF "$(INTL_DLL)" != "libintl-8.dll"
+# The gtk+ bundle doesn't provide libintl-8.dll (which is the case
+# with the 32-bit package); use the GNUTLS version.
+	xcopy $(GNUTLS_DIR)\bin\libintl-8.dll $(INSTALL_DIR) /d
+! ENDIF
+!ENDIF
+!IFDEF LUA_DIR
+	xcopy "$(LUA_DIR)\lua5.1.dll" $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF SMI_DIR
+	if not exist $(INSTALL_DIR)\snmp mkdir $(INSTALL_DIR)\snmp
+	if not exist $(INSTALL_DIR)\snmp\mibs mkdir $(INSTALL_DIR)\snmp\mibs
+	xcopy "$(SMI_DIR)\bin\libsmi-2.dll" $(INSTALL_DIR) /d
+	xcopy "$(SMI_DIR)\share\mibs\iana\*" $(INSTALL_DIR)\snmp\mibs /d
+	xcopy "$(SMI_DIR)\share\mibs\ietf\*" $(INSTALL_DIR)\snmp\mibs /d
+	xcopy "$(SMI_DIR)\share\mibs\irtf\*" $(INSTALL_DIR)\snmp\mibs /d
+	xcopy "$(SMI_DIR)\share\mibs\site\*" $(INSTALL_DIR)\snmp\mibs /d
+	xcopy "$(SMI_DIR)\share\mibs\tubs\*" $(INSTALL_DIR)\snmp\mibs /d
+	xcopy "$(SMI_DIR)\share\pibs\*" $(INSTALL_DIR)\snmp\mibs /d
+	xcopy "$(SMI_DIR)\share\yang\*.yang" $(INSTALL_DIR)\snmp\mibs /d
+!ENDIF
+!IFDEF GEOIP_DIR
+	xcopy "$(GEOIP_DIR)\bin\libGeoip-1.dll" $(INSTALL_DIR) /d
+!ENDIF
+!IFDEF WINSPARKLE_DIR
+	xcopy "$(WINSPARKLE_DIR)\WinSparkle.dll" $(INSTALL_DIR) /d
+!ENDIF
+	cd $(INSTALL_DIR)
+	peflags --dynamicbase=true --nxcompat=true *.dll
+!IF "$(GTK_INST_VERSION)" == "3.4"
+!ELSE
+	peflags --dynamicbase=true --nxcompat=true lib/gtk-2.0/*/engines/*.dll
+	peflags --dynamicbase=true --nxcompat=true lib/gtk-2.0/modules/*.dll
+!ENDIF
+	cd ..
+
+checkapi_local:
+	$(PERL) tools/checkAPIs.pl -build \
+	$(wireshark_SOURCES) \
+	$(TSHARK_TAP_SRC) \
+#	$(EXTRA_wireshark_SOURCES)
+
+checkapi: checkapi_local
+	cd wiretap
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../codecs
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../ui
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd gtk
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../win32
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../../epan
+##	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../epan/crypt
+##	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../dfilter
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../ftypes
+##	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../wslua
+##	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../dissectors
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ..
+	cd ../plugins
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+	cd ../wsutil
+	$(MAKE) /$(MAKEFLAGS) -f Makefile.nmake checkapi
+
+####
+_FORCE_:  ## Assumption: no file named _FORCE_ exists in the current directory
