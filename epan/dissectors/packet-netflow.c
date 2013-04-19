@@ -845,7 +845,7 @@ static const value_string v10_template_types_fastip[] = {
     { 3, "METER_OS_RELEASE"},
     { 4, "METER_OS_VERSION"},
     { 5, "METER_OS_MACHINE"},
-    { 6, "TCP_IN_OUT_FLAGS"},
+    { 6, "TCP_FLAGS"},
     { 13, "EPOCH_SECOND"},
     { 14, "NIC_NAME"},
     { 15, "NIC_ID"},
@@ -1472,10 +1472,10 @@ static int      hf_pie_fastip_meter_os_distribution              = -1;
 static int      hf_pie_fastip_bond_interface_mode                = -1;
 static int      hf_pie_fastip_bond_interface_physical_nic_count  = -1;
 static int      hf_pie_fastip_bond_interface_id                  = -1;
-static int      hf_pie_fastip_tcp_in_out_flags                   = -1;
+*/
+static int      hf_pie_fastip_tcp_flags                          = -1;
 static int      hf_pie_fastip_tcp_handshake_rtt_usec             = -1;
 static int      hf_pie_fastip_app_rtt_usec                       = -1;
-*/
 
 static int      hf_pie_ntop_fragmented           = -1;
 static int      hf_pie_ntop_fingerprint          = -1;
@@ -4771,6 +4771,10 @@ dissect_v9_v10_pdu_data(tvbuff_t *tvb, packet_info *pinfo, proto_tree *pdutree, 
             ti = proto_tree_add_item(pdutree, hf_pie_fastip_meter_os_machine,
                                      tvb, offset, length, ENC_ASCII|ENC_NA);
             break;
+        case ((VENDOR_FASTIP << 16) | 6) : /* TCP_FLAGS */
+            ti = proto_tree_add_item(pdutree, hf_pie_fastip_tcp_flags,
+                                     tvb, offset, length, ENC_NA);
+            break;
         case ((VENDOR_FASTIP << 16) | 23) : /* METER_OS_DISTRIBUTION */
             ti = proto_tree_add_item(pdutree, hf_pie_fastip_meter_os_distribution,
                                      tvb, offset, length, ENC_ASCII|ENC_NA);
@@ -4795,9 +4799,15 @@ dissect_v9_v10_pdu_data(tvbuff_t *tvb, packet_info *pinfo, proto_tree *pdutree, 
             ti = proto_tree_add_item(pdutree, hf_pie_fastip_nic_ip,
                                      tvb, offset, length, ENC_NA);
             break;
-
+        case ((VENDOR_FASTIP << 16) | 200) : /* TCP_HANDSHAKE_RTT_USEC */
+            ti = proto_tree_add_item(pdutree, hf_pie_fastip_tcp_handshake_rtt_usec,
+                                     tvb, offset, length, ENC_BIG_ENDIAN);
+            break;
+        case ((VENDOR_FASTIP << 16) | 201) : /* APP_RTT_USEC */
+            ti = proto_tree_add_item(pdutree, hf_pie_fastip_app_rtt_usec,
+                                     tvb, offset, length, ENC_BIG_ENDIAN);
+            break;
     /*
-    { 6, "TCP_IN_OUT_FLAGS"},
     { 18, "COLLISIONS"},
     { 19, "ERRORS"},
     */
@@ -7992,10 +8002,22 @@ proto_register_netflow(void)
         {&hf_pie_fastip_bond_interface_mode
         {&hf_pie_fastip_bond_interface_physical_nic_count
         {&hf_pie_fastip_bond_interface_id
-        {&hf_pie_fastip_tcp_in_out_flags
-        {&hf_pie_fastip_tcp_handshake_rtt_usec
-        {&hf_pie_fastip_app_rtt_usec
         */
+        {&hf_pie_fastip_tcp_handshake_rtt_usec,
+         {"TCP Handshake RTT uSec", "cflow.pie.fastip.tcp_handshake_rtt_usec",
+          FT_UINT32, BASE_DEC, NULL, 0x0,
+          "TCP Handshake RTT uSec", HFILL}
+        },
+        {&hf_pie_fastip_app_rtt_usec,
+         {"App RTT uSec", "cflow.pie.fastip.app_rtt_usec",
+          FT_UINT32, BASE_DEC, NULL, 0x0,
+          "App RTT uSec", HFILL}
+        },
+        {&hf_pie_fastip_tcp_flags,
+         {"TCP Flags", "cflow.pie.fastip.tcp_flags",
+          FT_UINT8, BASE_HEX, NULL, 0x0,
+          "TCP Flags", HFILL}
+        },
         /* ntop, 35632 / 80 */
         {&hf_pie_ntop_fragmented,
          {"Fragmented","cflow.pie.ntop.fragmented",
