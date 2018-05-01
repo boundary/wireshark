@@ -178,9 +178,6 @@ static void dissect_vrt(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
     col_set_str(pinfo->cinfo, COL_PROTOCOL, "VITA 49");
     col_clear(pinfo->cinfo,COL_INFO);
 
-    /* HACK to support UHD's weird header offset on data packets. */
-    if (tvb_get_guint8(tvb, 0) == 0) offset += 4;
-
     /* get packet type */
     type = tvb_get_guint8(tvb, offset) >> 4;
     col_add_str(pinfo->cinfo, COL_INFO, val_to_str(type, packet_types, "Reserved packet type (0x%02x)"));
