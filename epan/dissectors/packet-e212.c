@@ -2120,6 +2120,7 @@ static const value_string mcc_mnc_codes[] = {
     {  602010, "Mobinil" },
     {  602020, "Vodafone" },
     {  602030, "Etisalat" },
+    {  602040, "Telecom Egypt-WE" },
     {  603010, "Algerie Telecom" },
     {  603020, "Orascom Telecom Algerie" },
     {  604000, "Meditelecom (GSM)" },
